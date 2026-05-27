@@ -22,6 +22,7 @@ INITIAL_LIVES = 3
 INITIAL_LEVEL = 1
 INITIAL_NEXT_LEVEL_TARGET = 10
 LEVEL_UP_DISPLAY_DURATION = 2000  # ms
+MAX_LEVEL = 5                     # ⭐ 최대 레벨 5으로 제한
 
 # ⭐ 오디오 및 소리치기 설정 (여기가 들어가 있어야 에러가 안 납니다!)
 DB_THRESHOLD = 85.0              # 85dB 이상일 때만 인식

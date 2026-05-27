@@ -1,12 +1,13 @@
 """
-화면 렌더링 모듈 (pygame 의존 - 85dB 게이지 반영 및 쿨타임 UI 추가)
+화면 렌더링 모듈 (레벨별 배경 동적 반영 수정본)
 """
 
 import pygame
+import os
 from config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, BOSS_X, BOSS_Y, PLAYER_X,
     WHITE, BLACK, RED, GREEN, BLUE, YELLOW, PURPLE, CYAN,
-    DB_THRESHOLD, LEVEL_UP_DISPLAY_DURATION  # 수정 완료
+    DB_THRESHOLD, LEVEL_UP_DISPLAY_DURATION, MAX_LEVEL
 )
 from entities import GameState
 
@@ -20,18 +21,45 @@ class Renderer:
         self.font_boss = pygame.font.SysFont("Arial", 32, bold=True)
         self.font_level = pygame.font.SysFont("Arial", 60, bold=True)
 
-        # 시작 배경화면 이미지 로드 예외 처리 추가
-        try:
-            raw_bg = pygame.image.load("assets/background.png").convert()
-            self.background_img = pygame.transform.scale(raw_bg, (1000, 600))
-        except pygame.error:
-            self.background_img = None
+        # 레벨별 배경 이미지를 저장할 딕셔너리
+        self.background_images = {}
+        self._load_level_backgrounds()
+
+    def _load_level_backgrounds(self):
+        """level1_background.png ~ level5_background.png 이미지를 로드합니다."""
+        for lvl in range(1, MAX_LEVEL + 1):
+            # 💡 경로 문제 해결을 위해 두 가지 경로를 모두 대안으로 테스트합니다.
+            paths_to_try = [
+                f"level{lvl}_background.png",          # 1. 루트 폴더에 있을 때
+                f"gamefile/level{lvl}_background.png"   # 2. gamefile 폴더 안에 있을 때
+            ]
+            
+            success = False
+            for path in paths_to_try:
+                if os.path.exists(path):
+                    try:
+                        raw_bg = pygame.image.load(path).convert()
+                        scaled_bg = pygame.transform.scale(raw_bg, (SCREEN_WIDTH, SCREEN_HEIGHT))
+                        self.background_images[lvl] = scaled_bg
+                        success = True
+                        break
+                    except pygame.error:
+                        continue
+            
+            if not success:
+                print(f"경고: level{lvl}_background.png 이미지를 찾을 수 없습니다. 기본 검은색 배경을 사용합니다.")
+                self.background_images[lvl] = None
 
     def draw_frame(self, state: GameState, mic_volume: float,
                    is_shouting: bool, current_time: int):
         """게임 플레이 화면 전체를 그림"""
-        if self.background_img:
-            self.screen.blit(self.background_img, (0, 0))
+        
+        # ⭐ 현재 레벨에 맞는 배경 이미지 가져오기
+        current_bg = self.background_images.get(state.level, None)
+        
+        # ⭐ 배경 이미지가 정상 로드되었다면 화면에 blit, 없으면 검은 화면
+        if current_bg:
+            self.screen.blit(current_bg, (0, 0))
         else:
             self.screen.fill(BLACK)
 
@@ -73,8 +101,8 @@ class Renderer:
             self.screen.blit(surface, rect)
 
     def _draw_ui(self, state: GameState):
-        texts = [\
-            (f"LEVEL: {state.level}", CYAN, (PLAYER_X + 20, 20)),
+        texts = [
+            (f"LEVEL: {state.level} / {MAX_LEVEL}", CYAN, (PLAYER_X + 20, 20)),
             (f"LIVES: {state.lives} / 3", RED, (PLAYER_X + 20, 50)),
             (f"SCORE: {state.score}", WHITE, (PLAYER_X + 20, 80)),
             (f"INPUT: {state.current_input}", GREEN, (PLAYER_X + 20, SCREEN_HEIGHT - 40)),
